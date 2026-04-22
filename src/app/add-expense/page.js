@@ -1,109 +1,115 @@
-"use client";
+import express from "express";
+import Expense from "../models/Expense.js";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+const router = express.Router();
 
-export default function AddExpense() {
 
-  const [title, setTitle] = useState("");
-  const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("");
-  const [category, setCategory] = useState("");
+// ADD EXPENSE
+router.post("/", async (req, res) => {
 
-  const router = useRouter();
+  try {
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+    const { title, amount, category } = req.body;
 
-    const newExpense = {
+    const expense = new Expense({
       title,
-      amount,
-      date,
+      amount: Number(amount),
       category
-    };
+    });
 
-    const existing =
-      JSON.parse(localStorage.getItem("expenses")) || [];
+    await expense.save();
 
-    localStorage.setItem(
-      "expenses",
-      JSON.stringify([...existing, newExpense])
+    res.json({
+      message: "Expense added successfully",
+      expense
+    });
+
+  } catch (error) {
+
+    console.log("ERROR:", error);
+
+    res.status(500).json({
+      message: error.message
+    });
+
+  }
+
+});
+
+
+// GET ALL EXPENSES
+router.get("/", async (req, res) => {
+
+  try {
+
+    const expenses = await Expense.find();
+
+    res.json(expenses);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+
+});
+
+
+// DELETE EXPENSE
+router.delete("/:id", async (req, res) => {
+
+  try {
+
+    await Expense.findByIdAndDelete(req.params.id);
+
+    res.json({
+      message: "Expense deleted"
+    });
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Server error"
+    });
+
+  }
+
+});
+
+
+// UPDATE EXPENSE
+router.put("/:id", async (req, res) => {
+
+  try {
+
+    const { title, amount, category } = req.body;
+
+    const expense = await Expense.findByIdAndUpdate(
+      req.params.id,
+      { title, amount, category },
+      { new: true }
     );
 
-    setTitle("");
-    setAmount("");
-    setDate("");
-    setCategory("");
+    if (!expense) {
+      return res.status(404).json({
+        message: "Expense not found"
+      });
+    }
 
-    alert("Expense Added Successfully!");
+    res.json(expense);
 
-    router.push("/expenses");
-  };
+  } catch (error) {
 
-  return (
-    <div className="flex justify-center mt-16">
-      <div className="bg-white/20 backdrop-blur-md shadow-2xl p-8 rounded-3xl w-full max-w-md text-white">
+    console.log(error);
 
-        <h2 className="text-3xl font-bold mb-6 text-center">
-          Add New Expense
-        </h2>
+    res.status(500).json({
+      message: "Server error"
+    });
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+  }
 
-          {/* Title */}
-          <input
-            type="text"
-            placeholder="Title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full p-3 rounded-xl bg-white/30 placeholder-white outline-none"
-            required
-          />
+});
 
-          {/* Category */}
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="w-full p-3 rounded-xl bg-white/30 outline-none"
-            required
-          >
-            <option value="">Select Category</option>
-            <option value="Food">Food 🍔</option>
-            <option value="Travel">Travel ✈</option>
-            <option value="Shopping">Shopping 🛍</option>
-            <option value="Bills">Bills 💡</option>
-            <option value="Other">Other</option>
-          </select>
-
-          {/* Amount */}
-          <input
-            type="number"
-            placeholder="Amount"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className="w-full p-3 rounded-xl bg-white/30 placeholder-white outline-none"
-            required
-          />
-
-          {/* Date */}
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            className="w-full p-3 rounded-xl bg-white/30 outline-none"
-            required
-          />
-
-          {/* Button */}
-          <button
-            type="submit"
-            className="w-full bg-yellow-400 text-black p-3 rounded-xl font-semibold hover:scale-105 transition"
-          >
-            Add Expense
-          </button>
-
-        </form>
-      </div>
-    </div>
-  );
-}
+export default router;
